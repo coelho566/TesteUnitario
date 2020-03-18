@@ -1,10 +1,21 @@
 package br.ce.wcaquino.servicos;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+
+import br.ce.wcaquino.excption.NaoPodeDividirPorZeroException;
 
 
 public class CalculadoraTeste {
+	
+	private Calculadora calc;
+	
+	@Before
+	public void calculadora() {
+		calc = new Calculadora();
+	}
+	
 	
 	@Test
 	public void deveSomarDoisValores() {
@@ -12,11 +23,79 @@ public class CalculadoraTeste {
 		int a = 5;
 		int b = 3;
 		
-		Calculadora calc = new Calculadora();
 		
 		int resultado = calc.somar(a, b);
 		
-		Assert.assertEquals(4, resultado);
+		Assert.assertEquals(8, resultado);
 	}
+	
+	@Test
+	public void deveSubstrairDoisValores() {
+		int a = 8;
+		int b = 5;
+		
+		int resultado = calc.subtrair(a, b);
+		Assert.assertEquals(3, resultado);
+	}
+	
+	@Test
+	public void deveDividirDoisValores() throws NaoPodeDividirPorZeroException {
+		int a = 10;
+		int b = 2;
+		
+		int resultado = calc.dividir(a, b);
+		Assert.assertEquals(5, resultado);
+		
+	}
+	
+	@Test(expected = NaoPodeDividirPorZeroException.class)
+	public void deveLancarExcecaoAoDividirPorZero() throws NaoPodeDividirPorZeroException {
+		
+		int a = 10;
+		int b = 0;
+		
+		calc.dividir(a, b);
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 }

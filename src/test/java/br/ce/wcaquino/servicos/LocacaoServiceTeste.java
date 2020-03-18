@@ -1,15 +1,21 @@
 package br.ce.wcaquino.servicos;
 
+import static br.ce.wcaquino.builders.UsuarioBuilder.umUsuario;
+import static br.ce.wcaquino.matchers.DataDiferencaDiasMatcher.ehHoje;
+import static br.ce.wcaquino.matchers.DataDiferencaDiasMatcher.ehHojeComDiferencaDias;
+import static br.ce.wcaquino.matchers.MatchersProprios.caiEm;
+import static br.ce.wcaquino.matchers.MatchersProprios.caiNumaSegunda;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -31,20 +37,20 @@ public class LocacaoServiceTeste  {
 	@Rule
 	public ExpectedException exception = ExpectedException.none();
 	
+	private LocacaoService service;
+	
 	@Before
 	public void setup() {
-		System.out.println("Before");
+		service = new LocacaoService();
 	}
 	
-	@After
-	public void tearDown() {
-		System.out.println("After");
-	}
 	
-	public void testeLocacao() throws Exception{
+	@Test
+	public void deveAlugarFilme() throws Exception{
 		
-		LocacaoService service = new LocacaoService();
-		Usuario usuario = new Usuario("Usuario 1");
+		Assume.assumeFalse(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
+		
+		Usuario usuario = umUsuario().agora();
 		List<Filme> filme = Arrays.asList(new Filme("Rei leão", 1, 5.0));
 		
 		System.out.println("Teste!");
@@ -52,16 +58,15 @@ public class LocacaoServiceTeste  {
 		Locacao locacao = service.alugarFilme(usuario, filme);
 		
 		error.checkThat(locacao.getValor(), is(equalTo(5.0)));
-		error.checkThat(DataUtils.isMesmaData(locacao.getDataLocacao(), new Date()), is(true));
-		error.checkThat(DataUtils.isMesmaData(locacao.getDataRetorno(), DataUtils.obterDataComDiferencaDias(1)), is(true));
+		error.checkThat(locacao.getDataLocacao(), ehHoje());
+		error.checkThat(locacao.getDataRetorno(), ehHojeComDiferencaDias(1));
 	}
 	
 	@Test(expected = FilmeSemEstoqueException.class)
-	public void test() throws Exception {
+	public void naoDeveAlugarFilmeSemEstoque() throws Exception {
 		
 		//cenario
-		LocacaoService service = new LocacaoService();
-		Usuario usuario = new Usuario("Leandro");
+		Usuario usuario = umUsuario().agora();
 		List<Filme> filme = Arrays.asList(new Filme("Rei leão", 0, 4.0));
 		
 		//acao
@@ -70,14 +75,13 @@ public class LocacaoServiceTeste  {
 	}
 	
 	@Test
-	public void testLocacao() throws FilmeSemEstoqueException {
-		
-		LocacaoService service = new LocacaoService(); 
+	public void naoDeveAlugarFilmeSemUsuario() throws FilmeSemEstoqueException {
+	
 		List<Filme> filme = Arrays.asList(new Filme("Rei leão", 1, 5.0));
-		Usuario usuario = new Usuario("Pedro Rocha");
+		
 		
 		try {
-			service.alugarFilme(usuario, filme);
+			service.alugarFilme(null, filme);
 			Assert.fail();
 		} catch (LocadoraException e) {
 			assertThat(e.getMessage(), is("Usuario vazio"));
@@ -85,14 +89,30 @@ public class LocacaoServiceTeste  {
 	}
 	
 	@Test
-	public void testLocacao_FilmeVazio() throws FilmeSemEstoqueException, LocadoraException {
-		LocacaoService service = new LocacaoService();
-		Usuario usuario = new Usuario("Carlos Mattos");
+	public void naoDeveAlugarFilmeSemFilme() throws FilmeSemEstoqueException, LocadoraException {
+
+		Usuario usuario = umUsuario().agora();
 		
 		exception.expect(LocadoraException.class);
 		exception.expectMessage("Filme vazio");
 		
 		service.alugarFilme(usuario, null);
+	}
+	
+	
+	@Test
+	public void naoDeveDevolverFilmeNoDomingo() throws FilmeSemEstoqueException, LocadoraException {
+		Assume.assumeTrue(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
+		
+		Usuario usuario = umUsuario().agora();
+		List<Filme> filmes = Arrays.asList(new Filme("Filme 1",2, 5.0));
+		
+		Locacao retorno = service.alugarFilme(usuario, filmes);
+		
+		assertThat(retorno.getDataRetorno(), caiEm(Calendar.SUNDAY));
+		assertThat(retorno.getDataRetorno(), caiNumaSegunda());
+		
+		
 	}
 	
 	
