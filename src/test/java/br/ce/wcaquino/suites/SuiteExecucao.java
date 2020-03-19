@@ -14,6 +14,7 @@ import br.ce.wcaquino.servicos.LocacaoServiceTeste;
 	CalculoValorLocacaoTest.class,
 	LocacaoServiceTeste.class
 })
+
 public class SuiteExecucao {
 	
 	

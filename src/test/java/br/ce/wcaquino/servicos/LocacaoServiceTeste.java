@@ -1,5 +1,7 @@
 package br.ce.wcaquino.servicos;
 
+import static br.ce.wcaquino.builders.FilmeBuilder.umFilme;
+import static br.ce.wcaquino.builders.FilmeBuilder.umFilmeSemEstoque;
 import static br.ce.wcaquino.builders.UsuarioBuilder.umUsuario;
 import static br.ce.wcaquino.matchers.DataDiferencaDiasMatcher.ehHoje;
 import static br.ce.wcaquino.matchers.DataDiferencaDiasMatcher.ehHojeComDiferencaDias;
@@ -28,6 +30,7 @@ import br.ce.wcaquino.entidades.Usuario;
 import br.ce.wcaquino.excption.FilmeSemEstoqueException;
 import br.ce.wcaquino.excption.LocadoraException;
 import br.ce.wcaquino.utils.DataUtils;
+import buildermaster.BuilderMaster;
 
 public class LocacaoServiceTeste  {
 	
@@ -51,7 +54,7 @@ public class LocacaoServiceTeste  {
 		Assume.assumeFalse(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
 		
 		Usuario usuario = umUsuario().agora();
-		List<Filme> filme = Arrays.asList(new Filme("Rei leão", 1, 5.0));
+		List<Filme> filme = Arrays.asList(umFilme().comValor(5.0).agora());
 		
 		System.out.println("Teste!");
 		
@@ -67,7 +70,7 @@ public class LocacaoServiceTeste  {
 		
 		//cenario
 		Usuario usuario = umUsuario().agora();
-		List<Filme> filme = Arrays.asList(new Filme("Rei leão", 0, 4.0));
+		List<Filme> filme = Arrays.asList(umFilmeSemEstoque().agora());
 		
 		//acao
 		service.alugarFilme(usuario, filme);
@@ -77,7 +80,7 @@ public class LocacaoServiceTeste  {
 	@Test
 	public void naoDeveAlugarFilmeSemUsuario() throws FilmeSemEstoqueException {
 	
-		List<Filme> filme = Arrays.asList(new Filme("Rei leão", 1, 5.0));
+		List<Filme> filme = Arrays.asList(umFilme().agora());
 		
 		
 		try {
@@ -105,14 +108,17 @@ public class LocacaoServiceTeste  {
 		Assume.assumeTrue(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
 		
 		Usuario usuario = umUsuario().agora();
-		List<Filme> filmes = Arrays.asList(new Filme("Filme 1",2, 5.0));
+		List<Filme> filmes = Arrays.asList(umFilme().agora());
 		
 		Locacao retorno = service.alugarFilme(usuario, filmes);
 		
 		assertThat(retorno.getDataRetorno(), caiEm(Calendar.SUNDAY));
 		assertThat(retorno.getDataRetorno(), caiNumaSegunda());
 		
-		
+	}
+	
+	public static void main(String[] args) {
+		new BuilderMaster().gerarCodigoClasse(Locacao.class);
 	}
 	
 	
