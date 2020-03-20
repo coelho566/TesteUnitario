@@ -25,8 +25,17 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ErrorCollector;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
+import br.ce.wcaquino.builders.LocacaoBuilder;
 import br.ce.wcaquino.daos.LocacaoDAO;
 import br.ce.wcaquino.entidades.Filme;
 import br.ce.wcaquino.entidades.Locacao;
@@ -35,6 +44,8 @@ import br.ce.wcaquino.excption.FilmeSemEstoqueException;
 import br.ce.wcaquino.excption.LocadoraException;
 import br.ce.wcaquino.utils.DataUtils;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(LocacaoService.class)
 public class LocacaoServiceTeste  {
 	
 	@Rule
@@ -43,29 +54,25 @@ public class LocacaoServiceTeste  {
 	@Rule
 	public ExpectedException exception = ExpectedException.none();
 	
+	@InjectMocks
 	private LocacaoService service;
 	
+	@Mock
 	private SPCService spc;
+	@Mock
 	private LocacaoDAO dao;
+	@Mock
 	private EmailService email;
 	
 	@Before
 	public void setup() {
-		service = new LocacaoService();
-		dao = Mockito.mock(LocacaoDAO.class);
-		service.setLocacaoDAO(dao);
-		spc = Mockito.mock(SPCService.class);
-		service.setSPCService(spc);
-		email = Mockito.mock(EmailService.class);
-		service.setEmailService(email);
+		MockitoAnnotations.initMocks(this);
 		
 	}
-	
 	
 	@Test
 	public void deveAlugarFilme() throws Exception{
 		
-		Assume.assumeFalse(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
 		
 		Usuario usuario = umUsuario().agora();
 		List<Filme> filme = Arrays.asList(umFilme().comValor(5.0).agora());
@@ -116,24 +123,23 @@ public class LocacaoServiceTeste  {
 	
 	
 	@Test
-	public void naoDeveDevolverFilmeNoDomingo() throws FilmeSemEstoqueException, LocadoraException {
-		Assume.assumeTrue(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
+	public void naoDeveDevolverFilmeNoDomingo() throws Exception {
 		
 		Usuario usuario = umUsuario().agora();
 		List<Filme> filmes = Arrays.asList(umFilme().agora());
 		
+		PowerMockito.whenNew(Date.class).withNoArguments().thenReturn(DataUtils.obterData(20, 3, 2020));
+		
 		Locacao retorno = service.alugarFilme(usuario, filmes);
 		
-		assertThat(retorno.getDataRetorno(), caiEm(Calendar.SUNDAY));
 		assertThat(retorno.getDataRetorno(), caiNumaSegunda());
 		
 	}
 	
 	@Test
-	public void naoDeveAlugarFilmeParaNegativadoSpc() throws FilmeSemEstoqueException {
+	public void naoDeveAlugarFilmeParaNegativadoSpc() throws Exception {
 		
 		Usuario usuario = umUsuario().agora();
-	
 		List<Filme> filmes = Arrays.asList(umFilme().agora());
 		
 		Mockito.when(spc.possuiNegativacao(Mockito.any(Usuario.class))).thenReturn(true);
@@ -172,11 +178,38 @@ public class LocacaoServiceTeste  {
 		Mockito.verify(email, Mockito.atLeastOnce()).notificarAtraso(usuario3);
 		Mockito.verify(email, Mockito.never()).notificarAtraso(usuario2);
 		Mockito.verifyNoMoreInteractions(email);
-		
-		
-	
 	}
 	
+	@Test
+	public void deveTratarErronoSPC() throws Exception {
+		
+		Usuario usuario = umUsuario().agora();
+		List<Filme> filmes = Arrays.asList(umFilme().agora());
+		
+		Mockito.when(spc.possuiNegativacao(usuario)).thenThrow(new Exception("Falha catratrófica"));
+		
+		exception.expect(LocadoraException.class);
+		exception.expectMessage("Problemas com SPC, tente novamente");
+		
+		service.alugarFilme(usuario, filmes);
+	}
+	
+	@Test
+	public void deveProrrogarUmaLocacao() {
+		
+		Locacao locacao = LocacaoBuilder.umLocacao().agora();
+		
+		service.prorrogarLocacao(locacao, 3);
+		
+		
+		ArgumentCaptor<Locacao> argCapt = ArgumentCaptor.forClass(Locacao.class);
+		Mockito.verify(dao).salvar(argCapt.capture());
+		Locacao locacaoRetornada = argCapt.getValue();
+		
+		error.checkThat(locacaoRetornada.getValor(), CoreMatchers.is(12.0));
+		error.checkThat(locacaoRetornada.getDataLocacao(), ehHoje());
+		error.checkThat(locacaoRetornada.getDataRetorno(), ehHojeComDiferencaDias(3));
+	}
 	
 	
 	
