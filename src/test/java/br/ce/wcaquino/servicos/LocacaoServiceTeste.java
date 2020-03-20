@@ -6,7 +6,6 @@ import static br.ce.wcaquino.builders.LocacaoBuilder.umLocacao;
 import static br.ce.wcaquino.builders.UsuarioBuilder.umUsuario;
 import static br.ce.wcaquino.matchers.DataDiferencaDiasMatcher.ehHoje;
 import static br.ce.wcaquino.matchers.DataDiferencaDiasMatcher.ehHojeComDiferencaDias;
-import static br.ce.wcaquino.matchers.MatchersProprios.caiEm;
 import static br.ce.wcaquino.matchers.MatchersProprios.caiNumaSegunda;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -25,15 +24,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ErrorCollector;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import br.ce.wcaquino.builders.LocacaoBuilder;
 import br.ce.wcaquino.daos.LocacaoDAO;
@@ -44,8 +39,6 @@ import br.ce.wcaquino.excption.FilmeSemEstoqueException;
 import br.ce.wcaquino.excption.LocadoraException;
 import br.ce.wcaquino.utils.DataUtils;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(LocacaoService.class)
 public class LocacaoServiceTeste  {
 	
 	@Rule
@@ -73,6 +66,7 @@ public class LocacaoServiceTeste  {
 	@Test
 	public void deveAlugarFilme() throws Exception{
 		
+		Assume.assumeFalse(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
 		
 		Usuario usuario = umUsuario().agora();
 		List<Filme> filme = Arrays.asList(umFilme().comValor(5.0).agora());
@@ -124,12 +118,11 @@ public class LocacaoServiceTeste  {
 	
 	@Test
 	public void naoDeveDevolverFilmeNoDomingo() throws Exception {
+		Assume.assumeTrue(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
 		
 		Usuario usuario = umUsuario().agora();
 		List<Filme> filmes = Arrays.asList(umFilme().agora());
-		
-		PowerMockito.whenNew(Date.class).withNoArguments().thenReturn(DataUtils.obterData(20, 3, 2020));
-		
+	
 		Locacao retorno = service.alugarFilme(usuario, filmes);
 		
 		assertThat(retorno.getDataRetorno(), caiNumaSegunda());
@@ -140,6 +133,7 @@ public class LocacaoServiceTeste  {
 	public void naoDeveAlugarFilmeParaNegativadoSpc() throws Exception {
 		
 		Usuario usuario = umUsuario().agora();
+	
 		List<Filme> filmes = Arrays.asList(umFilme().agora());
 		
 		Mockito.when(spc.possuiNegativacao(Mockito.any(Usuario.class))).thenReturn(true);
